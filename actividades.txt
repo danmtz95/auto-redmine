@@ -1,3 +1,1 @@
-Ajuste en acta de resguardo interno no genera en algunos casos en el pdf.
-Eliminar la columna no. control en las tablas.
-En la busqueda de activos permitir la busqueda por no. control.	
+En la acta de Aclaración de activos faltantes agregar otra categoría de aclarados la cual es aclarados por control patrimonial.

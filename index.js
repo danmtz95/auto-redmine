@@ -1,17 +1,8 @@
-const axios = require('axios');
-const fs = require('fs');
-// URL de la API de Redmine para crear issues
-const apiUrl = ""
-
-const apiUrlget = ""
-// Clave de API de Redmine
-const apiKey = ""
-
+import axios from 'axios';
+import fs from 'fs';
+import { apiKey, userId, projectId, api, startDate } from './config.js';
 // Ruta del archivo de texto con la lista de actividades
 const filePath = './actividades.txt';
-
-
-
 // Leer el archivo de texto
 async function readFileAndCreateIssues() {
     try {
@@ -30,9 +21,44 @@ async function readFileAndCreateIssues() {
             }
         });
 
-        // let startDate = new Date(Date.UTC(2023, 8, 14));
-        let startDate = new Date('08-16-2023'); //cambiar la fecha de inicio de las actividades
-        console.log('Date: ' + startDate);
+        //          /"\
+        //         |\./|
+        //         |   |
+        //         |   |
+        //         |>~<|
+        //         |   |
+        //      /'\|   |/'\..
+        //  /~\|   |   |   | \
+        // |   =[@]=   |   |  \
+        // |   |   |   |   |   \
+        // | ~   ~   ~   ~ |`   )
+        // |                   /
+        //  \                 /
+        //   \               /
+        //    \    _____    /
+        //     |--//''`\--|
+        //     | (( +==)) |
+        //     |--\_|_//--|		  
+        // ________   __    __    _______   __    __
+        // |        | |  |  |  |  /       | |  |  /  /
+        // |  ------' |  |  |  |  |   ____| |  | /  /
+        // |  |___    |  |  |  |  |  |      |  |/  /
+        // |   ___|   |  |  |  |  |  |      |     / 
+        // |  |       |  |  |  |  |  |____  |     \
+        // |  |       |   --   |  |       | |  |\  \
+        // |__|       \________/   \______| |__| \__\
+
+        // // let startDate = new Date(Date.UTC(2023, 8, 14));
+        // let startDate = new Date('08-19-2023'); //cambiar la fecha de inicio de las actividades
+        // console.log('Date: ' + startDate);
+        // ________   __    __    _______   __    __
+        // |        | |  |  |  |  /       | |  |  /  /
+        // |  ------' |  |  |  |  |   ____| |  | /  /
+        // |  |___    |  |  |  |  |  |      |  |/  /
+        // |   ___|   |  |  |  |  |  |      |     / 
+        // |  |       |  |  |  |  |  |____  |     \
+        // |  |       |   --   |  |       | |  |\  \
+        // |__|       \________/   \______| |__| \__\
 
         let dueDate = new Date('2023-08-21'); // cambiar la fecha estimada de fin de las actividades
         const nextWeekDay = new Date(startDate);
@@ -52,24 +78,20 @@ async function readFileAndCreateIssues() {
             issuesToCreate.push(
                 {
                     // "issue": {
-                    "project_id": 283,
+                    "project_id": projectId,
                     "tracker_id": 2,
                     "status_id": 1,
                     "priority_id": 2,
-                    "author_id": 129,
-                    "assigned_to_id": 129,
+                    "author_id": userId,
+                    "assigned_to_id": userId,
                     "subject": activity,
                     // "description": "Ajuste en actas y reportes para producción", // no description for this example
                     "start_date": nextWeekDay.toISOString().split('T')[0],
                     "due_date": nextWeekDay.toISOString().split('T')[0],
                     "done_ratio": 100,
                     "estimated_hours": 8,
-                    //FOR SPENT TIME 
-                    "spent_on": nextWeekDay.toISOString().split('T')[0],
-                    "hours": 8.0,
-                    "activity_id": 9,
-                    //9 = development , 22 for bug
-                    //END OF SPENT TIME
+
+
                     "custom_fields": [
                         {
                             "id": 2,
@@ -79,8 +101,7 @@ async function readFileAndCreateIssues() {
                             "id": 3,
                             "value": "1"
                         }
-                    ]
-                    // }
+                    ],
                 });
 
             // Aumentar el contador de días
@@ -96,9 +117,33 @@ async function readFileAndCreateIssues() {
                 'X-Redmine-API-Key': apiKey,
             };
             try {
-                const response = await axios.post(apiUrl, { issue: issueData }, { headers });
+                const response = await axios.post(`${api}/issues.json`, { issue: issueData }, { headers });
+
                 if (response.status === 201) {
                     console.log(`Issue creado: ${issueData.subject}`);
+
+                    // Obtener el ID del issue recién creado
+                    const createdIssueId = response.data.issue.id;
+
+                    // Crear el time entry asociado al issue
+                    const timeEntryData = {
+                        //9 = development , 22 for bug
+                        //END OF SPENT TIME
+                        "issue_id": createdIssueId,
+                        "hours": 8.0,
+                        "spent_on": issueData.due_date,
+                        "activity_id": 9,
+                        "comments": ""
+                    };
+
+                    const timeEntryResponse = await axios.post(`${api}/time_entries.json`, { time_entry: timeEntryData }, { headers });
+
+                    if (timeEntryResponse.status === 201) {
+                        console.log(`Time entry creado para el issue: ${issueData.subject}`);
+                    } else {
+                        console.log(`Error al crear time entry: ${timeEntryResponse.status}`);
+                        console.log(timeEntryResponse.data);
+                    }
                 } else {
                     console.log(`Error al crear issue: ${response.status}`);
                     console.log(response.data);
@@ -106,6 +151,8 @@ async function readFileAndCreateIssues() {
             } catch (error) {
                 console.error('Error al enviar solicitud:', error.message);
             }
+
+
         }
     } catch (error) {
         console.error('Error:', error);
@@ -142,7 +189,7 @@ async function getIssuebyId(issue_id) {
         'X-Redmine-API-Key': apiKey,
     };
     try {
-        const response = await axios.get(apiUrlget.replace('{issue_id}', issue_id), { headers });
+        const response = await axios.get(`${api}/issues/${issue_id}.json`, { headers });
         if (response.status === 200) {
             console.log('Issue obtenido:', JSON.stringify(response.data, null, 2));
         } else {
@@ -153,7 +200,7 @@ async function getIssuebyId(issue_id) {
         console.error('Error al enviar solicitud:', error.message);
     }
 }
-const issueIdToGet = 29002;
 
-// readFileAndCreateIssues(); // descomentar esta funcion para generar y registrar las actividades del archivo actividades.txt
+const issueIdToGet = 29002;
+readFileAndCreateIssues(); // descomentar esta funcion para generar y registrar las actividades del archivo actividades.txt
 // getIssuebyId(issueIdToGet);
